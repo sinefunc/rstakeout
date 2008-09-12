@@ -1,4 +1,6 @@
-Ruby script to execute arbitrary command whenever a file changes
+Ruby script to execute an arbitrary command whenever a file changes.
+
+Forked from Topfunky's script rstakeout-topfunky.rb
 
 License: MIT
 

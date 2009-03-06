@@ -44,6 +44,9 @@ def require_gem(gemname)
   end
 end
 
+FAIL_ICON_PATH = File.join(File.dirname(__FILE__), 'rails_fail.png')
+OK_ICON_PATH = File.join(File.dirname(__FILE__), 'rails_fail.png')
+
 case PLATFORM
 when /darwin/
   require_gem 'ruby-growl'
@@ -62,11 +65,11 @@ module GrowlNotifier
     private :notify
 
     def notify_fail(output)
-      notify "Test/Spec FAIL", "#{output}", "~/farenta-trunk/rails_fail.png", 2
+      notify "Test/Spec FAIL", "#{output}", FAIL_ICON_PATH, 2
     end
 
     def notify_pass(output)
-      notify "Test/Spec pass", "#{output}", "~/farenta-trunk/rails_ok.png"
+      notify "Test/Spec pass", "#{output}", OK_ICON_PATH
     end
   end
 end

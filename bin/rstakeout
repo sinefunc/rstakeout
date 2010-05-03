@@ -47,32 +47,32 @@ def require_gem(gemname)
   end
 end
 
-FAIL_ICON_PATH = File.join(prefix, %w{.. data images fail.png})
-OK_ICON_PATH   = File.join(prefix, %w{.. data images ok.png})
-
-case RUBY_PLATFORM
-when /darwin/
-  require_gem 'ruby-growl'
-when /win32/
-  require_gem 'autosnarl'
-else
-  warn "Uh-oh, sorry. No Fancy-schmancy notifiers for #{RUBY_PLATFORM}"
-end
+FAIL_ICON_PATH    = File.join(prefix, %w{data images fail.png})
+OK_ICON_PATH      = File.join(prefix, %w{data images ok.png})
+CHANGED_ICON_PATH = File.join(prefix, %w{data images changed.png})
 
 module GrowlNotifier
   class << self
+    def growl_available?
+      @@available = system "which growlnotify > /dev/null"
+    end
+
     def notify(title, msg, img, pri=0, sticky="")
-      system "growlnotify -n 'rstakeout notification' --image #{img} -p #{pri} -m #{msg.inspect} '#{title}' #{sticky}"
+      system "growlnotify -n 'rstakeout notification' --image #{img} -p #{pri} -m #{msg.inspect} '#{title}' #{sticky}"  if growl_available?
     end
     
     private :notify
 
     def notify_fail(output)
-      notify "Test/Spec FAIL", "#{output}", FAIL_ICON_PATH, 2
+      notify "Failed", "#{output}", FAIL_ICON_PATH, 2
     end
 
     def notify_pass(output)
-      notify "Test/Spec pass", "#{output}", OK_ICON_PATH
+      notify "Passed!", "#{output}", OK_ICON_PATH
+    end
+
+    def notify_changed(file)
+      notify "File changed", file, CHANGED_ICON_PATH
     end
   end
 end
@@ -113,12 +113,16 @@ module EmptyNotifier
   end
   def self.notify_fail(output)
   end
+  def self.notify_changed(file)
+  end
 end
 
 Notifier = case RUBY_PLATFORM
   when /darwin/
+    warn "You can install `growlnotify` for Growl notifications"  unless GrowlNotifier.growl_available?
     GrowlNotifier
   when /win32/
+    require_gem 'autosnarl'
     SnarlNotifier
   else
     EmptyNotifier
@@ -156,7 +160,7 @@ end
 options = OpenStruct.new(:sleep_time => 1, :reload_glob => false, :synchronous => false)
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: rstakeout.rb [options] <command> <filespec>+"
+  opts.banner = "Usage: rstakeout [options] <command> <filespec>+"
   opts.on("-t", "--sleep-time T", Integer, "time to sleep after each loop iteration") do |t|
     options.sleep_time = t
   end
@@ -179,7 +183,9 @@ end
 
 if options.verbose
   p options
-  puts "Watching #{files.keys.join(', ')}\n\nFiles: #{files.keys.length}"
+  puts "=> Watching #{files.keys.join(', ')}\n\nFiles: #{files.keys.length}"
+else
+  puts "=> Watching #{files.keys.length} files... press Ctrl+C to stop."
 end
 
 def with_exclusive_lock_if_synchronous(run_synced, lockfile, &block)
@@ -200,17 +206,23 @@ loop do
   if changed_file
     with_exclusive_lock_if_synchronous(options.synchronous, lock_obj) do
       files[changed_file] = File.mtime(changed_file)
-      puts "=> #{changed_file} changed, running '#{command}'"
-      results = `#{command}`
+
+      system "clear"
+      puts "=> `#{changed_file}` changed, running '#{command}'"
+      puts ""
+
+      results = `#{command} 2>&1`
       puts results
 
       if results.include? 'tests'
         ParseSpecResult.notify_test_unit_results(results)
+      #else
+      #  ParseSpecResult.notify_rspec_results(results)
+      elsif $?.to_i > 0
+        Notifier.notify_fail "Error code #{$?.to_i}. See the log for details."
       else
-        ParseSpecResult.notify_rspec_results(results)
+        Notifier.notify_pass results
       end
-      # TODO Generic snarl/growl notification for other actions
-      puts "=> done"
     end
   end
   sleep options.sleep_time

@@ -174,7 +174,6 @@ end.parse!
 
 MYTEMP = ENV['TEMP'] || '/tmp'
 
-puts ARGV.inspect
 command = ARGV.shift
 files = build_mtimes_hash(ARGV)
 LOCKFILE = File.join(MYTEMP, 'rstakeout.lock')

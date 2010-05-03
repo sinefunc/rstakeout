@@ -31,6 +31,9 @@
 # * Fixes to work in Linux env too
 # Edvard Majakari <edvard@majakari.net>
 
+prefix = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+Dir["#{prefix}/vendor/*/lib"].each { |dir| $:.unshift dir }
+
 require 'optparse'
 require 'ostruct'
 require 'rubygems'
@@ -44,16 +47,16 @@ def require_gem(gemname)
   end
 end
 
-FAIL_ICON_PATH = File.join(File.dirname(__FILE__), 'rails_fail.png')
-OK_ICON_PATH = File.join(File.dirname(__FILE__), 'rails_fail.png')
+FAIL_ICON_PATH = File.join(prefix, %w{.. data images fail.png})
+OK_ICON_PATH   = File.join(prefix, %w{.. data images ok.png})
 
-case PLATFORM
+case RUBY_PLATFORM
 when /darwin/
   require_gem 'ruby-growl'
 when /win32/
   require_gem 'autosnarl'
 else
-  warn "Uh-oh, sorry. No Fancy-schmancy notifiers for #{PLATFORM}"
+  warn "Uh-oh, sorry. No Fancy-schmancy notifiers for #{RUBY_PLATFORM}"
 end
 
 module GrowlNotifier
@@ -112,15 +115,17 @@ module EmptyNotifier
   end
 end
 
-Notifier = case PLATFORM
-  when /linux/: EmptyNotifier
-  when /win32/: SnarlNotifier
-  else
+Notifier = case RUBY_PLATFORM
+  when /darwin/
     GrowlNotifier
+  when /win32/
+    SnarlNotifier
+  else
+    EmptyNotifier
   end
 
 module ParseSpecResult
- def self.notify_test_unit_results(results)
+  def self.notify_test_unit_results(results)
     output = results.slice(/(\d+)\s+tests?,\s*(\d+)\s+assertions?,\s*(\d+)\s+failures?(,\s*(\d+)\s+errors)?/)
     if output
       $~[3].to_i + $~[5].to_i > 0 ? Notifier.notify_fail(output) : Notifier.notify_pass(output)
@@ -184,9 +189,9 @@ def with_exclusive_lock_if_synchronous(run_synced, lockfile, &block)
 end
 
 loop do
-  changed_file, last_changed = files.find { |file, last_changed|
+  changed_file, last_changed = files.find { |file, mtime|
     begin
-      File.mtime(file) > last_changed
+      File.mtime(file) > mtime
     rescue Errno::ENOENT => e # file may have been moved, deleted etc. while running rstakeout
       warn e
     end

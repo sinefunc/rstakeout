@@ -1,6 +1,6 @@
 Ruby script to execute an arbitrary command whenever a file changes.
 
-Forked from Topfunky's script rstakeout-topfunky.rb
+Forked from github.com/edvardm/rstakeout, which was forked from topfunkyv
 
 License: MIT
 

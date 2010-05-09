@@ -32,5 +32,7 @@ Sinefunc has forked this project to:
 Copyright
 ---------
 
+Icons from http://gakuseisean.deviantart.com/art/OSE-PNGs-53752770
+
 License: MIT
 

@@ -58,7 +58,7 @@ module GrowlNotifier
     end
 
     def notify(title, msg, img, pri=0, sticky="")
-      system "growlnotify -n 'rstakeout notification' --image #{img} -p #{pri} -m #{msg.inspect} '#{title}' #{sticky}"  if growl_available?
+      system "growlnotify -d RSTAKEOUT_NOTIFY -n 'rstakeout notification' --image #{img} -p #{pri} -m #{msg.inspect} '#{title}' #{sticky}"  if growl_available?
     end
     
     private :notify
@@ -68,11 +68,11 @@ module GrowlNotifier
     end
 
     def notify_pass(output)
-      notify "Passed!", "#{output}", OK_ICON_PATH
+      notify "Passed!", "#{output}", OK_ICON_PATH, 0
     end
 
     def notify_changed(file)
-      notify "File changed", file, CHANGED_ICON_PATH
+      notify "Working...", "", CHANGED_ICON_PATH, -2
     end
   end
 end
@@ -210,6 +210,8 @@ loop do
       system "clear"
       puts "=> `#{changed_file}` changed, running '#{command}'"
       puts ""
+
+      Notifier.notify_changed changed_file
 
       change_command = command.gsub('%s', changed_file.gsub('"', '\"'))
       results = `#{change_command} 2>&1`
